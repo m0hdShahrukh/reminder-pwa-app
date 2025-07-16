@@ -1,22 +1,21 @@
 // public/service-worker.js
 
-// 1. Give your cache a version name. Start with v2.
-const CACHE_NAME = 'twenty-v2';
+// Give your cache a NEW version name to ensure an update.
+const CACHE_NAME = 'twenty-v3';
 
-// 2. List the essential files for your app shell to be cached.
+// List the essential files for your app shell.
+// The duplicate entry has been removed.
 const urlsToCache = [
   '/',
   '/index.html',
   '/manifest.json',
   '/favicon.ico',
-  '/logowhite.svg',
-  '/logowhite.svg',
+  '/logowhite.svg', // Ensure this file exists in your public folder
   '/alert.mp3'
 ];
 
-// 3. Install event: This runs when a new service worker is installed.
+// Install event
 self.addEventListener('install', event => {
-  // We wait until the cache is opened and all our essential files are cached.
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
@@ -26,16 +25,13 @@ self.addEventListener('install', event => {
   );
 });
 
-// 4. Activate event: This runs when the new service worker becomes active.
-// This is the perfect place to clean up old, outdated caches.
+// Activate event (This part is correct and remains the same)
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(cacheNames => {
       return Promise.all(
         cacheNames.map(cacheName => {
-          // If a cache's name is not our current CACHE_NAME, we delete it.
           if (cacheName !== CACHE_NAME) {
-            console.log('Deleting old cache:', cacheName);
             return caches.delete(cacheName);
           }
         })
@@ -44,18 +40,30 @@ self.addEventListener('activate', event => {
   );
 });
 
-// 5. Fetch event: This runs for every network request the page makes.
-// It tries to serve a file from the cache first before going to the network.
+// IMPROVED Fetch event: Network Falling Back to Cache
 self.addEventListener('fetch', event => {
+  // We only want to apply this strategy to GET requests.
+  if (event.request.method !== 'GET') {
+    return;
+  }
+
   event.respondWith(
-    caches.match(event.request)
-      .then(response => {
-        // If we find a matching response in the cache, return it.
-        if (response) {
-          return response;
-        }
-        // Otherwise, fetch the request from the network.
-        return fetch(event.request);
+    // 1. Try to fetch from the network.
+    fetch(event.request)
+      .then(networkResponse => {
+        // If the fetch is successful, we clone the response and cache it.
+        // A response can only be consumed once.
+        const responseToCache = networkResponse.clone();
+        caches.open(CACHE_NAME)
+          .then(cache => {
+            cache.put(event.request, responseToCache);
+          });
+        // Return the network response.
+        return networkResponse;
+      })
+      .catch(() => {
+        // 2. If the network fetch fails (offline), try to get it from the cache.
+        return caches.match(event.request);
       })
   );
 });

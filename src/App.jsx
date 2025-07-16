@@ -187,15 +187,15 @@ export default function App() {
     <div className="bg-slate-900 text-white min-h-screen font-sans p-4">
       <div className="max-w-md mx-auto">
         <header className="text-center my-8">
-          <h1 className="text-5xl font-bold text-sky-400">Twenty</h1>
-          <p className="text-slate-400 mt-2">Follow the 20-20-20 rule. Save your eyes.</p>
+          <h4 className="text-3xl font-bold text-sky-400">Task Reminder</h4>
+          <p className="text-slate-400 text-[13px] mt-2">Follow the 20-20-20 rule. Save your eyes. <br></br> Developed by <a href="https://shahrukh-react.netlify.app/ms-tools-hub.html" target='_blank' className='text-sky-400'>Mohd Shahrukh</a></p>
         </header>
 
         <div className="text-center mb-8 space-x-4">
           <button onClick={handleCreateNew} className="bg-sky-500 hover:bg-sky-600 text-white font-bold py-2 px-4 rounded-lg shadow-lg">
             ✨ Add Reminder
           </button>
-          <button onClick={handleTogglePauseAll} className="bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 px-4 rounded-lg shadow-lg">
+          <button onClick={handleTogglePauseAll} className="bg-blue-800 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-lg">
             {allPaused ? '▶️ Resume All' : '⏸️ Pause All'}
           </button>
         </div>

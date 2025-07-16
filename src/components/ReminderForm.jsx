@@ -4,32 +4,41 @@ import React, { useState, useEffect } from 'react';
 export default function ReminderForm({ onSave, onCancel, initialData }) {
   const [label, setLabel] = useState('');
   const [interval, setInterval] = useState(20);
-  // 👇 New state for the duration feature
   const [hasDuration, setHasDuration] = useState(false);
-  const [duration, setDuration] = useState(20); // Default 20 seconds
+
+  // Replaced single duration state with minutes and seconds
+  const [durationMinutes, setDurationMinutes] = useState(0);
+  const [durationSeconds, setDurationSeconds] = useState(20);
 
   useEffect(() => {
     if (initialData) {
       setLabel(initialData.label);
       setInterval(initialData.interval);
-      // Set duration fields if they exist on the reminder being edited
       setHasDuration(initialData.hasDuration || false);
-      setDuration(initialData.duration || 20);
+      
+      // Calculate minutes and seconds from the total duration when editing
+      const totalSeconds = initialData.duration || 20;
+      setDurationMinutes(Math.floor(totalSeconds / 60));
+      setDurationSeconds(totalSeconds % 60);
     }
   }, [initialData]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!label || !interval || (hasDuration && !duration)) {
+    if (!label || !interval) {
       alert('Please fill in all required fields.');
       return;
     }
+    
+    // Calculate total duration in seconds from the two fields before saving
+    const totalDurationInSeconds = (parseInt(durationMinutes || 0, 10) * 60) + parseInt(durationSeconds || 0, 10);
+    
     onSave({
       id: initialData?.id,
       label,
       interval: parseInt(interval),
-      hasDuration, // Pass the new data
-      duration: parseInt(duration), // Pass the new data
+      hasDuration,
+      duration: totalDurationInSeconds,
     });
   };
 
@@ -43,7 +52,6 @@ export default function ReminderForm({ onSave, onCancel, initialData }) {
           {initialData ? 'Edit Reminder' : 'New Reminder'}
         </h2>
         <div className="space-y-4">
-          {/* Label and Interval inputs remain the same */}
           <div>
             <label htmlFor="label" className="block text-sm font-medium text-slate-400 mb-1">
               Label
@@ -70,7 +78,6 @@ export default function ReminderForm({ onSave, onCancel, initialData }) {
               min="1"
             />
           </div>
-          {/* 👇 NEW DURATION FIELDS 👇 */}
           <div className="pt-2 border-t border-slate-700">
             <label htmlFor="hasDuration" className="flex items-center space-x-2 cursor-pointer">
               <input
@@ -84,19 +91,33 @@ export default function ReminderForm({ onSave, onCancel, initialData }) {
             </label>
           </div>
 
+          {/* 👇 UPDATED DURATION INPUTS 👇 */}
           {hasDuration && (
             <div>
-              <label htmlFor="duration" className="block text-sm font-medium text-slate-400 mb-1">
-                Close popup after (seconds)
+              <label className="block text-sm font-medium text-slate-400 mb-1">
+                Close popup after
               </label>
-              <input
-                type="number"
-                id="duration"
-                value={duration}
-                onChange={(e) => setDuration(e.target.value)}
-                className="w-full bg-slate-700 border border-slate-600 rounded-md p-2 focus:ring-2 focus:ring-sky-500 focus:outline-none"
-                min="1"
-              />
+              <div className="flex items-center space-x-2">
+                <input
+                  type="number"
+                  value={durationMinutes}
+                  onChange={(e) => setDurationMinutes(e.target.value)}
+                  className="w-full bg-slate-700 border border-slate-600 rounded-md p-2 focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                  min="0"
+                  placeholder="min"
+                />
+                <span className="text-slate-400">min</span>
+                <input
+                  type="number"
+                  value={durationSeconds}
+                  onChange={(e) => setDurationSeconds(e.target.value)}
+                  className="w-full bg-slate-700 border border-slate-600 rounded-md p-2 focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                  min="0"
+                  max="59"
+                  placeholder="sec"
+                />
+                <span className="text-slate-400">sec</span>
+              </div>
             </div>
           )}
         </div>

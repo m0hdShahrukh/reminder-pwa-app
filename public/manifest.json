@@ -1,25 +1,46 @@
 {
-  "short_name": "Twenty",
-  "name": "Twenty - Eye Break Reminder",
-  "icons": [
-    {
-      "src": "favicon.ico",
-      "sizes": "64x64 32x32 24x24 16x16",
-      "type": "image/x-icon"
-    },
-    {
-      "src": "logo192.png",
-      "type": "image/png",
-      "sizes": "192x192"
-    },
-    {
-      "src": "logo512.png",
-      "type": "image/png",
-      "sizes": "512x512"
-    }
-  ],
-  "start_url": ".",
-  "display": "standalone",
-  "theme_color": "#0f172a",
-  "background_color": "#0f172a"
+    "short_name": "MS Reminder",
+    "name": "MS Reminder - Break Reminder",
+    "description": "Follow the 20-20-20 rule to prevent eye strain with customizable reminders.",
+    "id": "/",
+    "start_url": ".",
+    "display": "standalone",
+    "theme_color": "#0f172a",
+    "background_color": "#0f172a",
+    "icons": [
+        {
+            "src": "/logowhite.svg",
+            "type": "image/svg+xml",
+            "sizes": "192x192",
+            "purpose": "any"
+        },
+        {
+            "src": "/logowhite.svg",
+            "type": "image/svg+xml",
+            "sizes": "512x512",
+            "purpose": "any"
+        },
+        {
+            "src": "/logowhite.svg",
+            "type": "image/svg+xml",
+            "sizes": "512x512",
+            "purpose": "maskable"
+        }
+    ],
+    "screenshots": [
+        {
+            "src": "/screenshot-desktop.png",
+            "type": "image/png",
+            "sizes": "1280x720",
+            "form_factor": "wide",
+            "label": "Desktop View"
+        },
+        {
+            "src": "/screenshot-mobile.png",
+            "type": "image/png",
+            "sizes": "640x1136",
+            "form_factor": "narrow",
+            "label": "Mobile View"
+        }
+    ]
 }

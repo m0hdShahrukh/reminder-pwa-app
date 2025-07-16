@@ -15,6 +15,7 @@ export default function App() {
   const [editingReminder, setEditingReminder] = useState(null);
   const [activeAlert, setActiveAlert] = useState(null);
   const [allPaused, setAllPaused] = useState(false);
+  const [installPromptEvent, setInstallPromptEvent] = useState(null);
 
   useEffect(() => {
     localStorage.setItem('reminders', JSON.stringify(reminders));
@@ -29,9 +30,6 @@ export default function App() {
           if (r.isPaused || r.nextDue > Date.now()) {
             return r;
           }
-          // ✅ BUG FIX #2: Base the next due time on the PREVIOUS due time.
-          // This ensures a 1-minute reminder is always 1 minute apart,
-          // regardless of popup duration or system lag.
           const newNextDue = r.nextDue + r.interval * 60 * 1000;
           triggerAlert(r);
           return { ...r, nextDue: newNextDue };
@@ -40,7 +38,39 @@ export default function App() {
     }, 1000);
     return () => clearInterval(timer);
   }, [allPaused]);
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (event) => {
+      // Prevent the default mini-infobar from appearing on mobile
+      event.preventDefault();
+      // Stash the event so it can be triggered later.
+      setInstallPromptEvent(event);
+      console.log("App is installable!");
+    };
 
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    // Cleanup the event listener
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+  const handleInstallClick = () => {
+    if (!installPromptEvent) {
+      return;
+    }
+    // Show the browser's install prompt
+    installPromptEvent.prompt();
+
+    // The event can only be used once, so we clear it
+    installPromptEvent.userChoice.then((choiceResult) => {
+      if (choiceResult.outcome === 'accepted') {
+        console.log('User accepted the install prompt');
+      } else {
+        console.log('User dismissed the install prompt');
+      }
+      setInstallPromptEvent(null);
+    });
+  };
   const handleTogglePauseReminder = (id) => {
     setReminders(prev =>
       prev.map(r => {
@@ -55,7 +85,7 @@ export default function App() {
       })
     );
   };
-  
+
   // ✅ BUG FIX #1: The "Pause All" function now correctly calculates
   // remaining time for every single reminder.
   const handleTogglePauseAll = () => {
@@ -71,7 +101,7 @@ export default function App() {
           return { ...r, isPaused: true, remainingOnPause };
         } else {
           // Resuming All
-          if(r.remainingOnPause === null || r.remainingOnPause === undefined) return r; // Was never paused, leave it.
+          if (r.remainingOnPause === null || r.remainingOnPause === undefined) return r; // Was never paused, leave it.
           const newNextDue = Date.now() + (r.remainingOnPause || 0);
           return { ...r, isPaused: false, nextDue: newNextDue, remainingOnPause: null };
         }
@@ -102,7 +132,7 @@ export default function App() {
     } else {
       new Audio('/alert.mp3').play().catch(e => console.error("Error playing sound:", e));
     }
-    
+
     if (Notification.permission === 'granted') {
       new Notification('Time for a break!', {
         body: `It's time for your "${reminder.label}" break.`,
@@ -111,10 +141,10 @@ export default function App() {
       });
     }
   };
-  
+
   const closeAlert = () => {
-      setActiveAlert(null);
-      stopFlashingTitle();
+    setActiveAlert(null);
+    stopFlashingTitle();
   }
 
   const handleDeleteReminder = (idToDelete) => {
@@ -127,7 +157,7 @@ export default function App() {
     setEditingReminder(reminderToEdit);
     setIsFormVisible(true);
   };
-  
+
   const handleCreateNew = () => {
     setEditingReminder(null);
     setIsFormVisible(true);
@@ -169,7 +199,17 @@ export default function App() {
             {allPaused ? '▶️ Resume All' : '⏸️ Pause All'}
           </button>
         </div>
-
+        {installPromptEvent && (
+          <div className="text-center mb-8 p-4 bg-slate-800 rounded-lg">
+            <p className="mb-3 text-slate-300">Get the best experience by installing this app on your device!</p>
+            <button
+              onClick={handleInstallClick}
+              className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg shadow-lg"
+            >
+              🚀 Install App
+            </button>
+          </div>
+        )}
         <main>
           <h2 className="text-xl font-semibold mb-4 text-slate-300">Active Reminders</h2>
           {reminders.length > 0 ? (
@@ -190,7 +230,7 @@ export default function App() {
         </main>
 
         {activeAlert && <AlertPopup reminder={activeAlert} onClose={closeAlert} />}
-        
+
         {isFormVisible && (
           <ReminderForm
             onSave={handleSaveReminder}

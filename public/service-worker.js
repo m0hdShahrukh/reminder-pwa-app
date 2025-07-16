@@ -1,31 +1,20 @@
 // public/service-worker.js
 
-// Give your cache a NEW version name to ensure an update.
-const CACHE_NAME = 'twenty-v3';
+const CACHE_NAME = 'twenty-v4'; // IMPORTANT: Increment the version!
 
-// List the essential files for your app shell.
-// The duplicate entry has been removed.
 const urlsToCache = [
   '/',
   '/index.html',
   '/manifest.json',
   '/favicon.ico',
-  '/logowhite.svg', // Ensure this file exists in your public folder
+  '/logowhite.svg',
   '/alert.mp3'
 ];
 
-// Install event
 self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => {
-        console.log('Opened cache and caching app shell');
-        return cache.addAll(urlsToCache);
-      })
-  );
+  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache)));
 });
 
-// Activate event (This part is correct and remains the same)
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(cacheNames => {
@@ -40,30 +29,21 @@ self.addEventListener('activate', event => {
   );
 });
 
-// IMPROVED Fetch event: Network Falling Back to Cache
+// This fetch listener is for offline capability. It remains the same.
 self.addEventListener('fetch', event => {
-  // We only want to apply this strategy to GET requests.
-  if (event.request.method !== 'GET') {
-    return;
-  }
-
+  if (event.request.method !== 'GET') return;
   event.respondWith(
-    // 1. Try to fetch from the network.
-    fetch(event.request)
-      .then(networkResponse => {
-        // If the fetch is successful, we clone the response and cache it.
-        // A response can only be consumed once.
-        const responseToCache = networkResponse.clone();
-        caches.open(CACHE_NAME)
-          .then(cache => {
-            cache.put(event.request, responseToCache);
-          });
-        // Return the network response.
-        return networkResponse;
-      })
-      .catch(() => {
-        // 2. If the network fetch fails (offline), try to get it from the cache.
-        return caches.match(event.request);
-      })
+    fetch(event.request).catch(() => caches.match(event.request))
+  );
+});
+
+// ✅ NEW: Listen for when a notification is clicked.
+self.addEventListener('notificationclick', (event) => {
+  // For now, we just close the notification. We could also open the app.
+  event.notification.close();
+
+  // Open the app window
+  event.waitUntil(
+    clients.openWindow('/')
   );
 });

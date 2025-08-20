@@ -31,7 +31,6 @@
 
     <!-- Main App Container -->
     <div id="main-container" class="p-4 sm:p-8 max-w-6xl w-full mx-auto">
-        <!-- MODIFIED: Added flex container for two-column layout -->
         <div class="flex flex-col lg:flex-row lg:gap-16">
 
             <!-- Left Column -->
@@ -40,8 +39,6 @@
                 <header class="mb-8 text-center">
                     <h1 class="text-4xl sm:text-5xl font-bold text-cyan-400">Your Reminders</h1>
                     <p class="text-slate-400 mt-2 text-lg">Stay on track with custom alerts.</p>
-                    <p class="text-slate-400 text-[13px] mt-2">Follow the 20-20-20 rule. Save your eyes. <br> Developed by <a href="https://shahrukh-react.netlify.app/ms-tools-hub.html" target="_blank" class="text-sky-400">Mohd Shahrukh</a></p>
-
                 </header>
 
                 <!-- Main Timer Display -->
@@ -149,6 +146,63 @@
     let synth = window.speechSynthesis;
     let femaleVoice = null;
 
+    // --- LOCAL STORAGE FUNCTIONS ---
+    /**
+     * Saves the current reminders array and a timestamp to localStorage.
+     */
+    function saveReminders() {
+        const stateToSave = {
+            reminders: reminders,
+            savedAt: Date.now()
+        };
+        localStorage.setItem('customRemindersApp', JSON.stringify(stateToSave));
+    }
+
+    /**
+     * Loads reminders from localStorage, adjusts time for elapsed period, and restores state.
+     */
+    function loadReminders() {
+        const savedStateJSON = localStorage.getItem('customRemindersApp');
+        if (savedStateJSON) {
+            const savedState = JSON.parse(savedStateJSON);
+            const savedReminders = savedState.reminders;
+            const savedAt = savedState.savedAt;
+            const timeElapsed = Math.round((Date.now() - savedAt) / 1000);
+
+            reminders = savedReminders.map(r => {
+                if (!r.isPaused) {
+                    // Subtract the time elapsed while the page was closed/reloading
+                    r.timeLeft -= timeElapsed;
+                }
+                // Reset any active breaks to avoid strange states on reload
+                r.isBreakActive = false;
+                r.breakTimeLeft = 0;
+
+                // Handle cases where the timer expired while the page was closed
+                if (r.timeLeft <= 0 && !r.isPaused) {
+                    // For simplicity, we'll just restart its cycle.
+                    r.timeLeft = r.duration; 
+                }
+                return r;
+            });
+
+        } else {
+            // Initialize with a default reminder if none are saved
+            reminders.push({
+                id: Date.now(),
+                title: "20-20-20 Eye Break",
+                duration: 20 * 60,
+                timeLeft: 20 * 60,
+                breakDuration: 20,
+                breakStartText: "Eye break start",
+                breakEndText: "Break is over",
+                isBreakActive: false,
+                breakTimeLeft: 0,
+                isPaused: true
+            });
+        }
+    }
+
     // --- CORE LOGIC ---
     function timerLoop() {
         let isAnyBreakActive = false;
@@ -191,7 +245,7 @@
         }
 
         updateMainDisplay();
-        updateIndividualDisplays(); // NEW: Update individual timers every second
+        updateIndividualDisplays();
         updateGlobalButtonState();
     }
 
@@ -231,9 +285,6 @@
     }
 
     // --- UI & RENDER FUNCTIONS ---
-    /**
-     * NEW: Efficiently updates only the text of individual countdowns without rebuilding the whole list.
-     */
     function updateIndividualDisplays() {
         reminders.forEach(r => {
             const timerEl = remindersList.querySelector(`.individual-timer[data-id="${r.id}"]`);
@@ -265,7 +316,6 @@
 
                 const reminderEl = document.createElement('div');
                 reminderEl.className = 'bg-slate-800 p-4 rounded-lg flex justify-between items-center';
-                // MODIFIED: Restructured HTML to include individual timer display
                 reminderEl.innerHTML = `
                     <div>
                         <p class="font-bold text-white">${r.title}</p>
@@ -342,12 +392,14 @@
         } else { // Add
             reminders.push({ id: Date.now(), ...reminderData });
         }
+        saveReminders();
         renderReminders();
         closeModal();
     }
     
     function deleteReminder(id) {
         reminders = reminders.filter(r => r.id !== id);
+        saveReminders();
         renderReminders();
     }
 
@@ -383,6 +435,7 @@
     function toggleAll() {
         const areAllPaused = reminders.every(r => r.isPaused);
         reminders.forEach(r => r.isPaused = !areAllPaused); 
+        saveReminders();
         renderReminders();
         
         if (areAllPaused) {
@@ -417,6 +470,7 @@
             r.isBreakActive = false;
             r.breakTimeLeft = 0;
         });
+        saveReminders();
         body.classList.remove('bg-green-900');
         timerContainer.classList.remove('border-green-500', 'pulsing-glow');
         renderReminders();
@@ -442,6 +496,7 @@
                 if (!reminder.isPaused && !timerInterval) {
                      timerInterval = setInterval(timerLoop, 1000);
                 }
+                saveReminders();
                 renderReminders();
             }
         }
@@ -455,23 +510,23 @@
 
     // --- INITIALIZATION ---
     function initialize() {
-        reminders.push({
-            id: Date.now(),
-            title: "20-20-20 Eye Break",
-            duration: 20 * 60,
-            timeLeft: 20 * 60,
-            breakDuration: 20,
-            breakStartText: "Eye break start",
-            breakEndText: "Break is over",
-            isBreakActive: false,
-            breakTimeLeft: 0,
-            isPaused: true
-        });
+        loadReminders();
         renderReminders();
         Notification.requestPermission();
         loadVoices();
         if (synth.onvoiceschanged !== undefined) {
             synth.onvoiceschanged = loadVoices;
+        }
+        // MODIFIED: Save state automatically when the user leaves the page.
+        window.addEventListener('beforeunload', saveReminders);
+        
+        // NEW: Automatically start the timer loop if any reminders were running before the refresh.
+        if (reminders.some(r => !r.isPaused)) {
+            if (!timerInterval) {
+                timerInterval = setInterval(timerLoop, 1000);
+            }
+            if (Tone.context.state !== 'running') Tone.start();
+            if (synth.state === 'suspended') synth.resume();
         }
     }
 
